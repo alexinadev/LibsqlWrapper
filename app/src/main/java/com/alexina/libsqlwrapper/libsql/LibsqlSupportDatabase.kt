@@ -4,42 +4,73 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.sqlite.SQLiteTransactionListener
 import android.os.CancellationSignal
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Looper
 import android.util.Pair
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
+import com.alexina.libsqlwrapper.logD
+import com.alexina.libsqlwrapper.logI
+import kotlinx.coroutines.android.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import tech.turso.libsql.EmbeddedReplicaDatabase
 import java.util.Locale
 
-class LibsqlSupportDatabase(libsqlDb: EmbeddedReplicaDatabase) : SupportSQLiteDatabase {
-
+class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, private val dbPath: String) : SupportSQLiteDatabase {
     private val connection = libsqlDb.connect()
+    private var inTransaction = false
+    private var transactionSuccessful = false
+    private val TAG = this::class.java.simpleName
 
+
+    // Dedicated thread for database operations
+    private val handlerThread = HandlerThread("libsql-db").apply { start() }
+    private val handler = Handler(handlerThread.looper)
+    val databaseDispatcher = handler.asCoroutineDispatcher() // Convert Handler to CoroutineDispatcher
 
 
     override fun query(query: SupportSQLiteQuery): Cursor {
-//        val rows = connection.execute(query.sql)
-        val rows = connection.query(query.sql)
-        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
+        return query(query.sql)
     }
 
     override fun query(query: SupportSQLiteQuery, cancellationSignal: CancellationSignal?): Cursor {
-        val rows = connection.query(query.sql)
-        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
+        return query(query.sql)
     }
 
     override fun query(query: String): Cursor {
-        val rows = connection.query(query)
-        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
+        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})")
+
+        return if (Looper.myLooper() == handler.looper) {
+            val rows = connection.query(query)
+            logD(TAG, "rows: $rows")
+            LibsqlCursor(rows) // C
+        } else {
+            throw IllegalStateException("Database accessed from wrong thread")
+        }
+//        val rows = connection.query(query)
+//        logD(TAG, "rows: $rows")
+//        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
+
+//        val rows = libsqlDb.connect().query(query)
+//        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
     }
 
     override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
-        val rows = connection.query(query, bindArgs)
+        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
+            acc.replace("?", "\$${index + 1}")
+        }
+        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
+        val rows = libsqlDb.connect().use { connection->
+          connection.query(preparedQuery, bindArgs)
+        }
+//        val rows = connection.query(query, bindArgs)
         return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
     }
 
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) {
-        //"Not yet implemented"
+        execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
     }
 
     override fun setLocale(locale: Locale) {
@@ -52,110 +83,122 @@ class LibsqlSupportDatabase(libsqlDb: EmbeddedReplicaDatabase) : SupportSQLiteDa
 
     override fun setMaximumSize(numBytes: Long): Long {
         //"Not yet implemented"
+        return numBytes
     }
 
     override fun setTransactionSuccessful() {
-        //"Not yet implemented"
+        transactionSuccessful = true
     }
 
     override fun update(table: String, conflictAlgorithm: Int, values: ContentValues, whereClause: String?, whereArgs: Array<out Any?>?): Int {
-        throw Error("Not supported update")
+//        val setClause = values.keySet().joinToString(", ") { "$it = ?" }
+//        val sql = "UPDATE $table SET $setClause${whereClause?.let { " WHERE $it" } ?: ""}"
+//        val args = values.values().toMutableList().apply {
+//            whereArgs?.let { addAll(it) }
+//        }
+//        return connection.executeUpdate(sql, args.toTypedArray()).affectedRows
+        throw Exception("Update is not supported via libsql")
     }
 
-    override fun yieldIfContendedSafely(): Boolean {
-        throw Error("Not supported yieldIfContendedSafely")
-    }
-
-    override fun yieldIfContendedSafely(sleepAfterYieldDelayMillis: Long): Boolean {
-        throw Error("Not supported yieldIfContendedSafely")
-    }
+    override fun yieldIfContendedSafely(): Boolean = false
+    override fun yieldIfContendedSafely(sleepAfterYieldDelayMillis: Long): Boolean = false
 
     override val attachedDbs: List<Pair<String, String>>?
-        get() = TODO("Not yet implemented")
+        get() = emptyList()  // libsql might not support attached databases
     override val isDatabaseIntegrityOk: Boolean
-        get() = TODO("Not yet implemented")
+        get() = true  // Implement proper integrity check if needed
     override val isDbLockedByCurrentThread: Boolean
-        get() = TODO("Not yet implemented")
+        get() = true  // libsql's threading model may vary
     override val isOpen: Boolean
-        get() = TODO("Not yet implemented")
+        get()  = true //connection.isOpen
     override val isReadOnly: Boolean
-        get() = TODO("Not yet implemented")
+        get() = true
     override val isWriteAheadLoggingEnabled: Boolean
-        get() = TODO("Not yet implemented")
+        get() = false  // Implement if libsql supports WAL
     override val maximumSize: Long
-        get() = TODO("Not yet implemented")
+        get() = Long.MAX_VALUE
     override var pageSize: Long
-        get() = TODO("Not yet implemented")
-        set(value) {}
-    override val path: String?
-        get() = TODO("Not yet implemented")
+        get() = 4096  // Default page size
+        set(value) { /* Not implemented */ }
+    override val path: String
+        get() = dbPath
     override var version: Int
-        get() = TODO("Not yet implemented")
+        get() = 1
         set(value) {}
 
     override fun beginTransaction() {
-        TODO("Not yet implemented")
+        libsqlDb.connect().execute("BEGIN TRANSACTION")
+        inTransaction = true
+        transactionSuccessful = false
     }
 
     override fun beginTransactionNonExclusive() {
-        TODO("Not yet implemented")
+        beginTransaction()
     }
 
     override fun beginTransactionWithListener(transactionListener: SQLiteTransactionListener) {
-        TODO("Not yet implemented")
+        beginTransaction()
+        transactionListener.onBegin()
     }
 
     override fun beginTransactionWithListenerNonExclusive(transactionListener: SQLiteTransactionListener) {
-        TODO("Not yet implemented")
+        beginTransactionNonExclusive()
+        transactionListener.onBegin()
     }
 
     override fun close() {
-        TODO("Not yet implemented")
+        libsqlDb.close()
     }
 
     override fun compileStatement(sql: String): SupportSQLiteStatement {
-        TODO("Not yet implemented")
+        return LibsqlStatement(libsqlDb.connect(), sql)
     }
 
     override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int {
-        TODO("Not yet implemented")
+        throw Exception("Deletion is not supported via libsql")
     }
 
     override fun disableWriteAheadLogging() {
-        TODO("Not yet implemented")
+        // Implement if libsql supports WAL
     }
 
     override fun enableWriteAheadLogging(): Boolean {
-        TODO("Not yet implemented")
+        return false  // libsql might not support WAL
     }
 
     override fun endTransaction() {
-        TODO("Not yet implemented")
+        when {
+            inTransaction && transactionSuccessful -> {
+                libsqlDb.connect().execute("COMMIT")
+            }
+            inTransaction -> {
+                libsqlDb.connect().execute("ROLLBACK")
+            }
+        }
+        inTransaction = false
+        transactionSuccessful = false
     }
 
     override fun execSQL(sql: String) {
-        TODO("Not yet implemented")
+        libsqlDb.connect().execute(sql)
     }
 
     override fun execSQL(sql: String, bindArgs: Array<out Any?>) {
-        TODO("Not yet implemented")
+//        val preparedQuery = bindArgs.foldIndexed(sql) { index, acc, _ ->
+//            acc.replace("?", "\$${index + 1}")
+//        }
+//        libsqlDb.connect().execute(preparedQuery, bindArgs)
+        libsqlDb.connect().execute(sql, bindArgs)
     }
 
-    override fun inTransaction(): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun inTransaction(): Boolean = inTransaction
 
     override fun insert(table: String, conflictAlgorithm: Int, values: ContentValues): Long {
-        // Implement using libsql's executeUpdate
+        throw Exception("insertion is not supported via libsql")
     }
 
     override fun needUpgrade(newVersion: Int): Boolean {
-        TODO("Not yet implemented")
+//        return version < newVersion
+        return false
     }
-
-    override fun delete(table: String, whereClause: String?, whereArgs: Array<Any?>?): Int {
-        // Delegate to libsql
-    }
-
-    // Implement other methods (update, execSQL, etc.)
 }

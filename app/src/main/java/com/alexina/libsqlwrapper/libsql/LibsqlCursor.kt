@@ -1,7 +1,6 @@
 package com.alexina.libsqlwrapper.libsql
 
 import android.database.AbstractCursor
-import tech.turso.libsql.Row
 import tech.turso.libsql.Rows
 
 class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
@@ -9,7 +8,14 @@ class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
 
     override fun getColumnNames(): Array<String> {
         // If column names are not exposed, track them manually (see earlier solutions)
-        return arrayOf("id", "name", "email")
+        //(`billId` TEXT NOT NULL,
+        // `v` TEXT NOT NULL,
+        // `partnerId` TEXT NOT NULL,
+        // `creator` TEXT NOT NULL,
+        // `credit` INTEGER NOT NULL,
+        // `deleted` INTEGER NOT NULL,
+        // `type` TEXT NOT NULL, `description` TEXT, `createdAt` TEXT, `photo` TEXT, `sms` INTEGER NOT NULL, `connectingId` TEXT, `localId` TEXT, PRIMARY KEY(`billId`));
+        return arrayOf("billId", "v", "partnerId", "creator", "credit", "deleted", "type", "description", "createdAt", "photo", "sms", "connectingId", "localId")
     }
 
     override fun getString(column: Int): String = getRow()[column] as String
@@ -26,5 +32,6 @@ class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
     // Close rows when the cursor is closed
     override fun close() {
         rows.close()
+        super.close()
     }
 }
