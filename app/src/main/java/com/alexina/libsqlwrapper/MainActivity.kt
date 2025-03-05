@@ -13,9 +13,11 @@ import com.alexina.libsqlwrapper.db.dao.BillDao
 import com.alexina.libsqlwrapper.libsql.LibsqlRoomDriver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 
 fun logD(tag: String, message: String){
     Log.d("ALEXINA", "[$tag] $message")
@@ -38,6 +40,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private lateinit var userDao: BillDao
 
+    val databaseDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+
     private val adapterBills by lazy {
         AdapterBills()
     }
@@ -48,11 +52,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnCreateDb.setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
+//            CoroutineScope(Dispatchers.IO).launch {
                 logW(TAG, "***** create database ******\nThread(${Thread.currentThread().name})")
-                db = AppDatabase.create(this@MainActivity)
+                db = AppDatabase.create(this@MainActivity, databaseDispatcher)
                 userDao = db.billDao()
-            }
+//            }
         }
 
         binding.btnSyncDb.setOnClickListener {
@@ -66,7 +70,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnGetBills.setOnClickListener {
-            logD(TAG, "get bills\nThread(${Thread.currentThread().name})")
 //            val rows = (db.openHelper as LibsqlRoomDriver).testQuery("SELECT * FROM Bill")
 //            logI(TAG, "rows count: ${rows.count()}")
 //
@@ -75,13 +78,14 @@ class MainActivity : AppCompatActivity() {
 //            }
 
 //
-            CoroutineScope(Dispatchers.Default).launch {
-                userDao.getBills().collectLatest { bills ->
-                    withContext(Dispatchers.Main){
-                        adapterBills.submitList(bills)
-                    }
-                }
-//                adapterBills.submitList(userDao.getBillsAsync())
+            CoroutineScope(Dispatchers.IO).launch {
+                logD(TAG, "get bills\nThread(${Thread.currentThread().name})")
+//                userDao.getBills().collectLatest { bills ->
+//                    withContext(Dispatchers.Main){
+//                        adapterBills.submitList(bills)
+//                    }
+//                }
+                adapterBills.submitList(userDao.getBillsAsync())
             }
 
         }

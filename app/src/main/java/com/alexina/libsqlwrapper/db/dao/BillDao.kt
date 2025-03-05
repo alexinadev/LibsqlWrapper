@@ -11,5 +11,5 @@ interface BillDao {
     fun getBills(): Flow<List<Bill>>
 
     @Query("SELECT * FROM Bill")
-    fun getBillsAsync(): List<Bill>
+    suspend fun getBillsAsync(): List<Bill>
 }
