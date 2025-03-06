@@ -23,7 +23,6 @@ import java.util.concurrent.FutureTask
 class LibsqlSupportDatabase(
     private val libsqlDb: EmbeddedReplicaDatabase,
     private val dbPath: String,
-    private val databaseExecutor: Executor
 ) : SupportSQLiteDatabase {
 
     private val connection = libsqlDb.connect()
@@ -31,12 +30,7 @@ class LibsqlSupportDatabase(
     private var transactionSuccessful = false
     private val TAG = this::class.java.simpleName
 
-
-    // Dedicated thread for database operations
-//    private val handlerThread = HandlerThread("libsql-db").apply { start() }
-//    private val handler = Handler(handlerThread.looper)
-//    val databaseDispatcher = handler.asCoroutineDispatcher() // Convert Handler to CoroutineDispatcher
-
+    private val handler = Handler(Looper.getMainLooper()) // Or use a background thread
 
     override fun query(query: SupportSQLiteQuery): Cursor {
         return query(query.sql)
@@ -47,51 +41,35 @@ class LibsqlSupportDatabase(
     }
 
     override fun query(query: String): Cursor {
-        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})")
-        val future = FutureTask<Cursor> {
-            val rows = connection.query(query)
-            logD(TAG, "rows: $rows")
-            LibsqlCursor(rows, databaseExecutor)
-        }
-        databaseExecutor.execute(future)
-        return future.get()
+        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})\n" +
+                "HandlerThread(${HandlerThread("HandlerThread").name})\n" +
+                "Handler(${handler.looper.thread.name})")
+//        return if (Looper.myLooper() == handler.looper) {
+//            val rows = connection.query(query)
+//            logD(TAG, "rows: $rows")
+//            LibsqlCursor(rows)
+//        } else {
+//            throw IllegalStateException("Database accessed from wrong thread")
+//        }
+        val rows = connection.query(query)
+        logD(TAG, "rows: $rows")
+        return LibsqlCursor(rows)
     }
 
     override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
-//        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
-//            acc.replace("?", "\$${index + 1}")
-//        }
-//        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
-//        val rows = libsqlDb.connect().use { connection->
-//          connection.query(preparedQuery, bindArgs)
-//        }
-////        val rows = connection.query(query, bindArgs)
-//        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
-
-        val future = FutureTask<Cursor> {
-            val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
-                acc.replace("?", "\$${index + 1}")
-            }
-            logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
-            val rows = libsqlDb.connect().use { connection->
-                connection.query(preparedQuery, bindArgs)
-            }
-            LibsqlCursor(rows, databaseExecutor) // Convert libsql Rows to a Cursor
+        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
+            acc.replace("?", "\$${index + 1}")
         }
-        databaseExecutor.execute(future)
-        return future.get()
-
-
+        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
+        val rows = libsqlDb.connect().use { connection->
+          connection.query(preparedQuery, bindArgs)
+        }
+//        val rows = connection.query(query, bindArgs)
+        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
     }
 
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) {
-//        execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
-
-        val future = FutureTask {
-            execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
-        }
-        databaseExecutor.execute(future)
-        future.get()
+        execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
     }
 
     override fun setLocale(locale: Locale) {
@@ -148,13 +126,9 @@ class LibsqlSupportDatabase(
         set(value) {}
 
     override fun beginTransaction() {
-        val future = FutureTask {
-            libsqlDb.connect().execute("BEGIN TRANSACTION")
-            inTransaction = true
-            transactionSuccessful = false
-        }
-        databaseExecutor.execute(future)
-        future.get()
+        libsqlDb.connect().execute("BEGIN TRANSACTION")
+        inTransaction = true
+        transactionSuccessful = false
     }
 
     override fun beginTransactionNonExclusive() {
@@ -172,19 +146,12 @@ class LibsqlSupportDatabase(
     }
 
     override fun close() {
-        val future = FutureTask {
-            libsqlDb.close()
-        }
-        databaseExecutor.execute(future)
-        future.get()
+        libsqlDb.close()
+       connection.close()
     }
 
     override fun compileStatement(sql: String): SupportSQLiteStatement {
-        val future = FutureTask {
-            LibsqlStatement(connection, sql)
-        }
-        databaseExecutor.execute(future)
-        return future.get()
+        return LibsqlStatement(connection, sql)
     }
 
     override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int {
@@ -200,41 +167,25 @@ class LibsqlSupportDatabase(
     }
 
     override fun endTransaction() {
-        val future = FutureTask {
-            when {
-                inTransaction && transactionSuccessful -> {
-                    libsqlDb.connect().execute("COMMIT")
-                }
-                inTransaction -> {
-                    libsqlDb.connect().execute("ROLLBACK")
-                }
+        when {
+            inTransaction && transactionSuccessful -> {
+                libsqlDb.connect().execute("COMMIT")
             }
-            inTransaction = false
-            transactionSuccessful = false
+
+            inTransaction -> {
+                libsqlDb.connect().execute("ROLLBACK")
+            }
         }
-        databaseExecutor.execute(future)
-        future.get()
+        inTransaction = false
+        transactionSuccessful = false
     }
 
     override fun execSQL(sql: String) {
-        val future = FutureTask {
-            connection.execute(sql)
-        }
-        databaseExecutor.execute(future)
-        future.get()
+        connection.execute(sql)
     }
 
     override fun execSQL(sql: String, bindArgs: Array<out Any?>) {
-
-        val future = FutureTask {
-            //        val preparedQuery = bindArgs.foldIndexed(sql) { index, acc, _ ->
-//            acc.replace("?", "\$${index + 1}")
-//        }
-//        libsqlDb.connect().execute(preparedQuery, bindArgs)
-            connection.execute(sql, bindArgs)
-        }
-        databaseExecutor.execute(future)
-        future.get()
+        connection.execute(sql, bindArgs)
     }
 
     override fun inTransaction(): Boolean = inTransaction

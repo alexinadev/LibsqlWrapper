@@ -47,7 +47,7 @@ object AppModule {
     ): LibsqlRoomDriver {
         val future = FutureTask<LibsqlRoomDriver> {
             logW(TAG, "⏭⏭⏭ Start provideLibsqlRoomDriver ⏮⏮⏮")
-            LibsqlRoomDriver(context, databaseExecutor)
+            LibsqlRoomDriver(context)
         }
         databaseExecutor.execute(future)
         val driver = future.get() // Block until initialization is complete
