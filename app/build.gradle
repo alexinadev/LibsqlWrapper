@@ -58,6 +58,7 @@ dependencies {
     ksp libs.androidx.room.compiler
     implementation libs.androidx.room.ktx
 
-    implementation libs.libsql
+//    implementation libs.libsql
+    implementation files('libs/libsql.aar')
 
 }
