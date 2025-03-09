@@ -70,6 +70,7 @@ object AppModule {
         return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
             .openHelperFactory { libsqlRoomDriver }
 //            .setQueryExecutor(databaseExecutor) // Use the same executor
+            .allowMainThreadQueries()
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)

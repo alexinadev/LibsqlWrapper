@@ -30,7 +30,7 @@ class LibsqlSupportDatabase(
     private var transactionSuccessful = false
     private val TAG = this::class.java.simpleName
 
-    private val handler = Handler(Looper.getMainLooper()) // Or use a background thread
+//    private val handler = Handler(Looper.getMainLooper()) // Or use a background thread
 
     override fun query(query: SupportSQLiteQuery): Cursor {
         return query(query.sql)
@@ -41,18 +41,13 @@ class LibsqlSupportDatabase(
     }
 
     override fun query(query: String): Cursor {
-        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})\n" +
-                "HandlerThread(${HandlerThread("HandlerThread").name})\n" +
-                "Handler(${handler.looper.thread.name})")
-//        return if (Looper.myLooper() == handler.looper) {
-//            val rows = connection.query(query)
-//            logD(TAG, "rows: $rows")
-//            LibsqlCursor(rows)
-//        } else {
-//            throw IllegalStateException("Database accessed from wrong thread")
-//        }
+        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})")
+
         val rows = connection.query(query)
-        logD(TAG, "rows: $rows")
+        logD(TAG, "rows: ${rows.count()}")
+        rows.forEach {
+            logD(TAG, "${it[0]}\n")
+        }
         return LibsqlCursor(rows)
     }
 

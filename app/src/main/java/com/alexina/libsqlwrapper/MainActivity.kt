@@ -7,6 +7,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.alexina.libsqlwrapper.databinding.ActivityMainBinding
 import com.alexina.libsqlwrapper.db.AppDatabase
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private val viewModel by viewModels<ViewModelMain>()
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var db: AppDatabase
+    private lateinit var dao: BillDao
 
     private val adapterBills by lazy {
         AdapterBills()
@@ -40,15 +43,16 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnCreateDb.setOnClickListener {
 //            CoroutineScope(Dispatchers.IO).launch {
-//                logW(TAG, "***** create database ******\nThread(${Thread.currentThread().name})")
-//                db = AppDatabase.create(this@MainActivity)
-//                userDao = db.billDao()
+                logW(TAG, "***** create database ******\nThread(${Thread.currentThread().name})")
+                db = AppDatabase.create(this@MainActivity)
+               dao = db.billDao()
 //            }
         }
 
         binding.btnSyncDb.setOnClickListener {
-//            logW(TAG, "***** sync database ******")
-//            (db.openHelper as LibsqlRoomDriver).syncDatabase()
+            logW(TAG, "***** sync database ******")
+            (db.openHelper as LibsqlRoomDriver).syncDatabase()
+//            viewModel.syncDb()
         }
 
         binding.rv.apply {
@@ -75,8 +79,18 @@ class MainActivity : AppCompatActivity() {
 ////                adapterBills.submitList(userDao.getBillsAsync())
 //            }
 
-            viewModel.getBills()
+//            viewModel.getBills()
 
+            val bills = dao.getBillsAsync()
+            adapterBills.submitList(bills)
+
+//            lifecycleScope.launch {
+//                dao.getBills().collectLatest { bills->
+//                    withContext(Dispatchers.Main){
+//                        adapterBills.submitList(bills)
+//                    }
+//                }
+//            }
         }
     }
 }

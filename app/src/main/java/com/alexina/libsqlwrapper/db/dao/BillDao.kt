@@ -10,6 +10,6 @@ interface BillDao {
     @Query("SELECT * FROM Bill")
     fun getBills(): Flow<List<Bill>>
 
-    @Query("SELECT * FROM Bill")
+    @Query("SELECT * FROM Bill LIMIT 5")
     fun getBillsAsync(): List<Bill>
 }
