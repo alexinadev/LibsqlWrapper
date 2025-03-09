@@ -19,6 +19,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+
         maven { url 'https://maven.scijava.org/content/repositories/public/'}
         maven { url 'https://maven.myket.ir'}
         maven { url 'https://nexus.web.cern.ch/nexus/content/repositories/public/'}
@@ -27,3 +28,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LibsqlWrapper"
 include ':app'
+include ':libsql'
