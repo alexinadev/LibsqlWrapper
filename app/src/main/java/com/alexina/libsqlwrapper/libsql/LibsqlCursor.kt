@@ -1,9 +1,13 @@
 package com.alexina.libsqlwrapper.libsql
 
 import android.database.AbstractCursor
+import com.alexina.libsqlwrapper.logD
+import tech.turso.libsql.Row
 import tech.turso.libsql.Rows
 
 class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
+    val rowsArray = rows.toList()
+
     override fun getCount(): Int = rows.count() // If available, or iterate to count
 
     override fun getColumnNames(): Array<String> {
@@ -18,18 +22,26 @@ class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
         return arrayOf("billId", "v", "partnerId", "creator", "credit", "deleted", "type", "description", "createdAt", "photo", "sms", "connectingId", "localId")
     }
 
-    override fun getString(column: Int): String = getRow()[column] as String
-    override fun getShort(column: Int) = getRow()[column] as Short
-    override fun getInt(column: Int) = getRow()[column] as Int
-    override fun getLong(column: Int): Long = getRow()[column] as Long
-    override fun getFloat(column: Int) = getRow()[column] as Float
-    override fun getDouble(column: Int) = getRow()[column] as Double
-    override fun isNull(column: Int) = getRow()[column] as Boolean
-    override fun getBlob(column: Int): ByteArray = getRow()[column] as ByteArray
-    private fun getRow() = rows.next()
+    private fun getRow(): Row {
+        return rowsArray[position]
+    }
+
+    private fun getColumn(column: Int): Any? {
+        val value = getRow()[column]
+        return value
+    }
+
+    override fun getString(column: Int): String = getColumn(column) as String
+    override fun getShort(column: Int) = getColumn(column) as Short
+    override fun getInt(column: Int) = getLong(column).toInt()
+    override fun getLong(column: Int): Long = getColumn(column) as Long
+    override fun getFloat(column: Int) = getColumn(column) as Float
+    override fun getDouble(column: Int) = getColumn(column) as Double
+    override fun isNull(column: Int) = getColumn(column) == null
+    override fun getBlob(column: Int): ByteArray = getColumn(column) as ByteArray
+//    private fun getRow() = rows.next()
 
 
-    // Close rows when the cursor is closed
     override fun close() {
         rows.close()
         super.close()

@@ -19,9 +19,9 @@ abstract class AppDatabase : RoomDatabase() {
         fun create(context: Context): AppDatabase {
             logI("AppDatabase", "create database. Thread(${Thread.currentThread().name})")
             val openHelper = LibsqlRoomDriver(context)
-            openHelper.syncDatabase()
             return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
                 .openHelperFactory { openHelper }
+                .allowMainThreadQueries()
                 .build()
         }
     }

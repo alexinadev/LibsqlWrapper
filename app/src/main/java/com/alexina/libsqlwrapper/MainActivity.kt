@@ -17,16 +17,19 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-fun logD(tag: String, message: String){
+fun logD(tag: String, message: String) {
     Log.d("ALEXINA", "[$tag] $message")
 }
-fun logE(tag: String, message: String){
+
+fun logE(tag: String, message: String) {
     Log.e("ALEXINA", "[$tag] $message")
 }
-fun logW(tag: String, message: String){
+
+fun logW(tag: String, message: String) {
     Log.w("ALEXINA", "[$tag] $message")
 }
-fun logI(tag: String, message: String){
+
+fun logI(tag: String, message: String) {
     Log.i("ALEXINA", "[$tag] $message")
 }
 
@@ -48,11 +51,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnCreateDb.setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
-                logW(TAG, "***** create database ******\nThread(${Thread.currentThread().name})")
-                db = AppDatabase.create(this@MainActivity)
-                userDao = db.billDao()
-            }
+//            CoroutineScope(Dispatchers.IO).launch {
+            logW(TAG, "***** create database ******\nThread(${Thread.currentThread().name})")
+            db = AppDatabase.create(this@MainActivity)
+            userDao = db.billDao()
+//            }
         }
 
         binding.btnSyncDb.setOnClickListener {
@@ -67,23 +70,8 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnGetBills.setOnClickListener {
             logD(TAG, "get bills\nThread(${Thread.currentThread().name})")
-//            val rows = (db.openHelper as LibsqlRoomDriver).testQuery("SELECT * FROM Bill")
-//            logI(TAG, "rows count: ${rows.count()}")
-//
-//            rows.forEachIndexed { index, anies ->
-//                logD(TAG, "[$index] - ${anies.joinToString(",")}")
-//            }
-
-//
-            CoroutineScope(Dispatchers.Default).launch {
-                userDao.getBills().collectLatest { bills ->
-                    withContext(Dispatchers.Main){
-                        adapterBills.submitList(bills)
-                    }
-                }
-//                adapterBills.submitList(userDao.getBillsAsync())
-            }
-
+            adapterBills.submitList(userDao.getBillsAsync())
         }
+
     }
 }

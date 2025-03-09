@@ -25,12 +25,6 @@ class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, priva
     private val TAG = this::class.java.simpleName
 
 
-    // Dedicated thread for database operations
-    private val handlerThread = HandlerThread("libsql-db").apply { start() }
-    private val handler = Handler(handlerThread.looper)
-    val databaseDispatcher = handler.asCoroutineDispatcher() // Convert Handler to CoroutineDispatcher
-
-
     override fun query(query: SupportSQLiteQuery): Cursor {
         return query(query.sql)
     }
@@ -42,13 +36,12 @@ class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, priva
     override fun query(query: String): Cursor {
         logI(TAG, "query: $query\nThread(${Thread.currentThread().name})")
 
-        return if (Looper.myLooper() == handler.looper) {
-            val rows = connection.query(query)
-            logD(TAG, "rows: $rows")
-            LibsqlCursor(rows) // C
-        } else {
-            throw IllegalStateException("Database accessed from wrong thread")
-        }
+//        return if (Looper.myLooper() == handler.looper) {
+        val rows = connection.query(query)
+        return LibsqlCursor(rows) // C
+//        } else {
+//            throw IllegalStateException("Database accessed from wrong thread")
+//        }
 //        val rows = connection.query(query)
 //        logD(TAG, "rows: $rows")
 //        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
@@ -62,8 +55,8 @@ class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, priva
             acc.replace("?", "\$${index + 1}")
         }
         logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
-        val rows = libsqlDb.connect().use { connection->
-          connection.query(preparedQuery, bindArgs)
+        val rows = libsqlDb.connect().use { connection ->
+            connection.query(preparedQuery, bindArgs)
         }
 //        val rows = connection.query(query, bindArgs)
         return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
@@ -110,7 +103,7 @@ class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, priva
     override val isDbLockedByCurrentThread: Boolean
         get() = true  // libsql's threading model may vary
     override val isOpen: Boolean
-        get()  = true //connection.isOpen
+        get() = true //connection.isOpen
     override val isReadOnly: Boolean
         get() = true
     override val isWriteAheadLoggingEnabled: Boolean
@@ -171,6 +164,7 @@ class LibsqlSupportDatabase(private val libsqlDb: EmbeddedReplicaDatabase, priva
             inTransaction && transactionSuccessful -> {
                 libsqlDb.connect().execute("COMMIT")
             }
+
             inTransaction -> {
                 libsqlDb.connect().execute("ROLLBACK")
             }
