@@ -1,12 +1,12 @@
 package tech.turso.libsql
 
-import java.util.function.Consumer
 import tech.turso.libsql.proto.Row as ProtoRow
 
 typealias Row = List<Any?>
 
 class Rows internal constructor(private var inner: Long) : AutoCloseable, Iterable<Row> {
     init {
+        android.util.Log.i("mylibsql", "Created with ptr: $inner")
         require(this.inner != 0L) { "Attempted to construct a Rows with a null pointer" }
     }
 
@@ -25,6 +25,7 @@ class Rows internal constructor(private var inner: Long) : AutoCloseable, Iterab
     }
 
     override fun close() {
+        android.util.Log.i("mylibsql", "closing ptr: $inner")
         require(this.inner != 0L) { "Rows object already closed" }
         nativeClose(this.inner)
         this.inner = 0

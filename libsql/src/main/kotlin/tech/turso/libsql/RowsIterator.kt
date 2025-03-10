@@ -1,6 +1,6 @@
 package tech.turso.libsql
 
-class RowsIterator(val rows: Rows): Iterator<Row> {
+class RowsIterator(val rows: Rows) : Iterator<Row> {
     private var currentRow: Row = rows.next()
 
     override fun hasNext(): Boolean = currentRow.isNotEmpty()

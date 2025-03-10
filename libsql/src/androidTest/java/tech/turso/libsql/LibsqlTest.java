@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
@@ -30,7 +29,7 @@ public class LibsqlTest {
     public void failNestedTransaction() {
         try {
             try (var db = Libsql.open(":memory:");
-                 var conn = db.connect()) {
+                    var conn = db.connect()) {
                 var tx1 = conn.transaction();
                 var tx2 = tx1.transaction();
             }
@@ -69,7 +68,7 @@ public class LibsqlTest {
     @Test
     public void queryMultiple() {
         try (var db = Libsql.open(":memory:");
-             var conn = db.connect()) {
+                var conn = db.connect()) {
 
             var end = 255;
 
@@ -78,8 +77,10 @@ public class LibsqlTest {
             for (int i = 0; i < 255; i++) {
                 conn.execute(
                         "insert into test values (?, ?, ?, ?)",
-                        i, "" + i, Math.exp(i), new byte[]{ (byte) i }
-                );
+                        i,
+                        "" + i,
+                        Math.exp(i),
+                        new byte[] {(byte) i});
             }
 
             try (var rows = conn.query("select * from test")) {
@@ -88,7 +89,7 @@ public class LibsqlTest {
                     assertEquals((long) i, row.get(0));
                     assertEquals("" + i, row.get(1));
                     assertEquals(Math.exp(i), row.get(2));
-                    assertArrayEquals(new byte[]{ (byte) i }, (byte[]) row.get(3));
+                    assertArrayEquals(new byte[] {(byte) i}, (byte[]) row.get(3));
                     i++;
                 }
             }

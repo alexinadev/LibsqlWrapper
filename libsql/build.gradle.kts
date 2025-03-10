@@ -44,7 +44,6 @@ android {
         consumerProguardFiles("consumer-rules.pro")
 
         // follow AGP 8.4 default: https://developer.android.com/build/releases/gradle-plugin#compatibility
-//        ndkVersion = "25.1.8937393"
         ndkVersion = "26.1.10909125"
 
         ndk {
@@ -92,6 +91,11 @@ dependencies {
 }
 
 cargo {
+    if (gradle.startParameter.taskNames.any { it.lowercase().contains("release") }) {
+        profile = "release"
+    } else {
+        profile = "debug"
+    }
     module = "./src/main/rust/"
     libname = "libsql_android"
     targets = listOf("arm", "arm64", "x86", "x86_64")
@@ -100,7 +104,7 @@ cargo {
 //        spec.environment("PATH", "/usr/local/bin:/usr/bin:/bin:$HOME/.cargo/bin")
 //        spec.environment("PATH", "/Users/alexina/.cargo/bin")
         // default clang version for NDK 26.1.10909125, NDK 27^ uses 18
-        spec.environment("NDK_CLANG_VERSION", 20)
+        spec.environment("NDK_CLANG_VERSION", 17)
     }
 }
 
