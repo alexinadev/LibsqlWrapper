@@ -7,6 +7,7 @@ import android.os.CancellationSignal
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.util.Log
 import android.util.Pair
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
@@ -21,11 +22,10 @@ import java.util.concurrent.Executor
 import java.util.concurrent.FutureTask
 
 class LibsqlSupportDatabase(
-    private val libsqlDb: EmbeddedReplicaDatabase,
-    private val dbPath: String,
+    private val db: EmbeddedReplicaDatabase,
+    override val path: String?
 ) : SupportSQLiteDatabase {
 
-    private val connection = libsqlDb.connect()
     private var inTransaction = false
     private var transactionSuccessful = false
     private val TAG = this::class.java.simpleName
@@ -41,27 +41,40 @@ class LibsqlSupportDatabase(
     }
 
     override fun query(query: String): Cursor {
-        logI(TAG, "query: $query\nThread(${Thread.currentThread().name})")
+        return db.connect().use { c ->
+            val queryStart = System.currentTimeMillis()
+            val rows = c.query(query)
+            val queryDuration = System.currentTimeMillis() - queryStart
+            Log.d("Libsql", ".query took $queryDuration ms")
 
-        val rows = connection.query(query)
-        logD(TAG, "rows: ${rows.count()}")
-        rows.forEach {
-            logD(TAG, "${it[0]}\n")
+            val cursorStart = System.currentTimeMillis()
+            val cursor = LibsqlCursor(rows)
+            val cursorDuration = System.currentTimeMillis() - cursorStart
+            Log.d("Libsql", "LibsqlCursor construction took $cursorDuration ms")
+
+            cursor
         }
-        return LibsqlCursor(rows)
     }
 
     override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
-        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
-            acc.replace("?", "\$${index + 1}")
+        return db.connect().use { c ->
+            val rows = c.query(query, bindArgs)
+            LibsqlCursor(rows)
         }
-        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
-        val rows = libsqlDb.connect().use { connection->
-          connection.query(preparedQuery, bindArgs)
-        }
-//        val rows = connection.query(query, bindArgs)
-        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
     }
+
+
+//    override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
+//        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
+//            acc.replace("?", "\$${index + 1}")
+//        }
+//        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
+//        val rows = db.connect().use { connection ->
+//            connection.query(preparedQuery, bindArgs)
+//        }
+////        val rows = connection.query(query, bindArgs)
+//        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
+//    }
 
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) {
         execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
@@ -85,12 +98,6 @@ class LibsqlSupportDatabase(
     }
 
     override fun update(table: String, conflictAlgorithm: Int, values: ContentValues, whereClause: String?, whereArgs: Array<out Any?>?): Int {
-//        val setClause = values.keySet().joinToString(", ") { "$it = ?" }
-//        val sql = "UPDATE $table SET $setClause${whereClause?.let { " WHERE $it" } ?: ""}"
-//        val args = values.values().toMutableList().apply {
-//            whereArgs?.let { addAll(it) }
-//        }
-//        return connection.executeUpdate(sql, args.toTypedArray()).affectedRows
         throw Exception("Update is not supported via libsql")
     }
 
@@ -104,7 +111,7 @@ class LibsqlSupportDatabase(
     override val isDbLockedByCurrentThread: Boolean
         get() = true  // libsql's threading model may vary
     override val isOpen: Boolean
-        get()  = true //connection.isOpen
+        get() = true //connection.isOpen
     override val isReadOnly: Boolean
         get() = true
     override val isWriteAheadLoggingEnabled: Boolean
@@ -114,14 +121,12 @@ class LibsqlSupportDatabase(
     override var pageSize: Long
         get() = 4096  // Default page size
         set(value) { /* Not implemented */ }
-    override val path: String
-        get() = dbPath
     override var version: Int
         get() = 1
         set(value) {}
 
     override fun beginTransaction() {
-        libsqlDb.connect().execute("BEGIN TRANSACTION")
+        db.connect().execute("BEGIN TRANSACTION")
         inTransaction = true
         transactionSuccessful = false
     }
@@ -141,12 +146,11 @@ class LibsqlSupportDatabase(
     }
 
     override fun close() {
-        libsqlDb.close()
-       connection.close()
+        db.close()
     }
 
     override fun compileStatement(sql: String): SupportSQLiteStatement {
-        return LibsqlStatement(connection, sql)
+        return LibsqlStatement(db, sql)
     }
 
     override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int {
@@ -164,11 +168,11 @@ class LibsqlSupportDatabase(
     override fun endTransaction() {
         when {
             inTransaction && transactionSuccessful -> {
-                libsqlDb.connect().execute("COMMIT")
+                db.connect().execute("COMMIT")
             }
 
             inTransaction -> {
-                libsqlDb.connect().execute("ROLLBACK")
+                db.connect().execute("ROLLBACK")
             }
         }
         inTransaction = false
@@ -176,11 +180,11 @@ class LibsqlSupportDatabase(
     }
 
     override fun execSQL(sql: String) {
-        connection.execute(sql)
+        db.connect().use { c -> c.query(sql) }
     }
 
     override fun execSQL(sql: String, bindArgs: Array<out Any?>) {
-        connection.execute(sql, bindArgs)
+        db.connect().use { c -> c.query(sql, bindArgs) }
     }
 
     override fun inTransaction(): Boolean = inTransaction

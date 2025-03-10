@@ -21,7 +21,6 @@ abstract class AppDatabase : RoomDatabase() {
             val openHelper = LibsqlRoomDriver(context)
             return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
                 .openHelperFactory { openHelper }
-                .allowMainThreadQueries()
                 .build()
         }
     }

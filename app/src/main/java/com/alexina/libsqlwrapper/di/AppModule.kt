@@ -45,15 +45,7 @@ object AppModule {
         @ApplicationContext context: Context,
         databaseExecutor: Executor
     ): LibsqlRoomDriver {
-//        val future = FutureTask<LibsqlRoomDriver> {
-//            logW(TAG, "⏭⏭⏭ Start provideLibsqlRoomDriver ⏮⏮⏮")
-//            LibsqlRoomDriver(context)
-//        }
-//        databaseExecutor.execute(future)
-//        val driver = future.get() // Block until initialization is complete
         val driver =  LibsqlRoomDriver(context)
-
-        logW(TAG, "⏭⏭⏭ provideLibsqlRoomDriver ⏮⏮⏮")
         return driver
     }
 
@@ -64,9 +56,6 @@ object AppModule {
         libsqlRoomDriver: LibsqlRoomDriver,
 //        databaseExecutor: Executor
     ): AppDatabase {
-        logW(TAG, "⏭⏭⏭ provideDatabase ⏮⏮⏮")
-        logI(TAG, "create database. Thread(${Thread.currentThread().name})")
-        libsqlRoomDriver.syncDatabase()
         return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
             .openHelperFactory { libsqlRoomDriver }
 //            .setQueryExecutor(databaseExecutor) // Use the same executor
@@ -74,7 +63,6 @@ object AppModule {
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)
-                    logI(TAG, "onOpen. Thread(${Thread.currentThread().name})")
                 }
             })
             .build()
