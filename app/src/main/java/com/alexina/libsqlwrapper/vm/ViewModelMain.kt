@@ -18,8 +18,9 @@ class ViewModelMain @Inject constructor(
     val billsLiveData = MutableLiveData<List<Bill>>(listOf())
 
     fun getBills() = viewModelScope.launch(Dispatchers.IO){
-        repositoryMain.getBillsFlow().collectLatest { bills->
+        repositoryMain.getBillsAsync().also { bills->
             billsLiveData.postValue(bills)
+
         }
     }
 
