@@ -33,51 +33,28 @@ class LibsqlSupportDatabase(
 //    private val handler = Handler(Looper.getMainLooper()) // Or use a background thread
 
     override fun query(query: SupportSQLiteQuery): Cursor {
-        return query(query.sql)
+        return query(query.sql, emptyArray())
     }
 
     override fun query(query: SupportSQLiteQuery, cancellationSignal: CancellationSignal?): Cursor {
-        return query(query.sql)
+        return query(query.sql, emptyArray())
     }
 
     override fun query(query: String): Cursor {
-        return db.connect().use { c ->
-            val queryStart = System.currentTimeMillis()
-            val rows = c.query(query)
-            val queryDuration = System.currentTimeMillis() - queryStart
-            Log.d("Libsql", ".query took $queryDuration ms")
-
-            val cursorStart = System.currentTimeMillis()
-            val cursor = LibsqlCursor(rows)
-            val cursorDuration = System.currentTimeMillis() - cursorStart
-            Log.d("Libsql", "LibsqlCursor construction took $cursorDuration ms")
-
-            cursor
-        }
+        return query(query, emptyArray())
     }
 
     override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
+        Log.d(TAG, "query: $query")
         return db.connect().use { c ->
-            val rows = c.query(query, bindArgs)
+            val rows = c.query(query, *bindArgs)
             LibsqlCursor(rows)
         }
     }
 
 
-//    override fun query(query: String, bindArgs: Array<out Any?>): Cursor {
-//        val preparedQuery = bindArgs.foldIndexed(query) { index, acc, _ ->
-//            acc.replace("?", "\$${index + 1}")
-//        }
-//        logI(TAG, "query: $query\npreparedQuery: $preparedQuery\nbindArgs: ${bindArgs.joinToString(",")}")
-//        val rows = db.connect().use { connection ->
-//            connection.query(preparedQuery, bindArgs)
-//        }
-////        val rows = connection.query(query, bindArgs)
-//        return LibsqlCursor(rows) // Convert libsql Rows to a Cursor
-//    }
-
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) {
-        execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
+//        execSQL("PRAGMA foreign_keys = ${if (enabled) 1 else 0}")
     }
 
     override fun setLocale(locale: Locale) {
@@ -126,7 +103,7 @@ class LibsqlSupportDatabase(
         set(value) {}
 
     override fun beginTransaction() {
-        db.connect().execute("BEGIN TRANSACTION")
+//        db.connect().execute("BEGIN TRANSACTION")
         inTransaction = true
         transactionSuccessful = false
     }
@@ -166,15 +143,6 @@ class LibsqlSupportDatabase(
     }
 
     override fun endTransaction() {
-        when {
-            inTransaction && transactionSuccessful -> {
-                db.connect().execute("COMMIT")
-            }
-
-            inTransaction -> {
-                db.connect().execute("ROLLBACK")
-            }
-        }
         inTransaction = false
         transactionSuccessful = false
     }
