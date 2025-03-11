@@ -27,7 +27,7 @@ class LibsqlRoomDriver(
 
     private val db  = Libsql.open(
         path = dbPath,
-        url = "http://10.0.2.2:8080",
+        url = "http://192.168.159.121:8080",
         authToken = "",
     )
 
@@ -40,9 +40,6 @@ class LibsqlRoomDriver(
 
             return LibsqlSupportDatabase(db, dbPath)
         }
-//        get() {
-//            throw Error("Not supported writableDatabase")
-//        }
 
     override fun close() {
         db.close()
@@ -52,9 +49,7 @@ class LibsqlRoomDriver(
         //"Not yet implemented"
     }
 
-    fun syncDatabase()  {
-        logI(TAG, "******** syncDatabase Started ********")
+    fun sync() {
         db.sync()
-        logE(TAG, "******** syncDatabase ended ********")
     }
 }

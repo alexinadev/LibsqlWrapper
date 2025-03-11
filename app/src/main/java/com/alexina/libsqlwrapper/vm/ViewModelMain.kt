@@ -2,6 +2,8 @@ package com.alexina.libsqlwrapper.vm
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.room.RoomDatabase
+import com.alexina.libsqlwrapper.db.AppDatabase
 import com.alexina.libsqlwrapper.entities.Bill
 import com.alexina.libsqlwrapper.entities.Partner
 import com.alexina.libsqlwrapper.libsql.LibsqlRoomDriver
@@ -15,7 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ViewModelMain @Inject constructor(
     private val repositoryMain: RepositoryMain,
-    private val roomDriver: LibsqlRoomDriver,
+    private val db: AppDatabase,
 ) : BaseVM() {
 
     val billsLiveData = MutableLiveData<List<Bill>>(listOf())
@@ -41,7 +43,13 @@ class ViewModelMain @Inject constructor(
 
 
 
-    fun syncDb() = roomDriver.syncDatabase()
+    fun sync(tableNames: Array<String>?) {
+        db.sync(tableNames)
+    }
+
+    fun sync() {
+        sync(null)
+    }
 
 
 }

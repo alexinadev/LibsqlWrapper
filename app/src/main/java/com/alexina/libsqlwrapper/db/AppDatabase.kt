@@ -1,6 +1,8 @@
 package com.alexina.libsqlwrapper.db
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -13,16 +15,17 @@ import com.alexina.libsqlwrapper.logI
 
 @Database(entities = [Bill::class, Partner::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
+    companion object {
+        var TABLES = arrayOf("bill", "partner")
+    }
 
     abstract fun billDao(): BillDao
 
-//    companion object {
-//        fun create(context: Context): AppDatabase {
-//            logI("AppDatabase", "create database. Thread(${Thread.currentThread().name})")
-//            val openHelper = LibsqlRoomDriver(context)
-//            return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
-//                .openHelperFactory { openHelper }
-//                .build()
-//        }
-//    }
+
+    @SuppressLint("RestrictedApi")
+    fun sync(tableNames: Array<String>?) {
+        (openHelper as LibsqlRoomDriver).sync()
+        invalidationTracker.notifyObserversByTableNames(*(tableNames ?: TABLES))
+        Log.d("AppDatabase", "notifyObserversByTableNames")
+    }
 }

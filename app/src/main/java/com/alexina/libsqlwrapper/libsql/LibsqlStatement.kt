@@ -1,15 +1,9 @@
 package com.alexina.libsqlwrapper.libsql
-
-import android.util.Log
 import androidx.sqlite.db.SupportSQLiteStatement
-import com.alexina.libsqlwrapper.logD
-import com.alexina.libsqlwrapper.logE
-import tech.turso.libsql.Connection
-import tech.turso.libsql.EmbeddedReplicaDatabase
 
-class LibsqlStatement(private val db: EmbeddedReplicaDatabase, private val sql: String) : SupportSQLiteStatement {
+class LibsqlStatement(private val db: LibsqlSupportDatabase, private val sql: String) : SupportSQLiteStatement {
     override fun execute() {
-        db.connect().use { c -> c.query(sql) }
+        db.query(sql)
     }
 
     override fun executeUpdateDelete(): Int = 0
@@ -19,11 +13,11 @@ class LibsqlStatement(private val db: EmbeddedReplicaDatabase, private val sql: 
     }
 
     override fun simpleQueryForLong(): Long {
-        return db.connect().use { c -> c.query(sql).next()[0] as Long }
+        return db.query(sql).getLong(0)
     }
 
     override fun simpleQueryForString(): String {
-        return db.connect().use { c -> c.query(sql).next()[0] as String }
+        return db.query(sql).getString(0)
 
     }
 

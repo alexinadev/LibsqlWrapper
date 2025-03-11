@@ -86,7 +86,7 @@ class LibsqlSupportDatabase(
     override val isDatabaseIntegrityOk: Boolean
         get() = true  // Implement proper integrity check if needed
     override val isDbLockedByCurrentThread: Boolean
-        get() = true  // libsql's threading model may vary
+        get() = false  // libsql's threading model may vary
     override val isOpen: Boolean
         get() = true //connection.isOpen
     override val isReadOnly: Boolean
@@ -127,7 +127,7 @@ class LibsqlSupportDatabase(
     }
 
     override fun compileStatement(sql: String): SupportSQLiteStatement {
-        return LibsqlStatement(db, sql)
+        return LibsqlStatement(this, sql)
     }
 
     override fun delete(table: String, whereClause: String?, whereArgs: Array<out Any?>?): Int {
@@ -148,11 +148,11 @@ class LibsqlSupportDatabase(
     }
 
     override fun execSQL(sql: String) {
-        db.connect().use { c -> c.query(sql) }
+        query(sql, emptyArray())
     }
 
     override fun execSQL(sql: String, bindArgs: Array<out Any?>) {
-        db.connect().use { c -> c.query(sql, bindArgs) }
+        query(sql, bindArgs)
     }
 
     override fun inTransaction(): Boolean = inTransaction

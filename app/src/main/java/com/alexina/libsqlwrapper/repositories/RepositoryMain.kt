@@ -22,5 +22,4 @@ class RepositoryMain @Inject constructor(
 
     fun getPartnersFlow() = billDao.getPartnersFlow()
     fun getPartners() = billDao.getPartners()
-
 }

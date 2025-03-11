@@ -39,9 +39,6 @@ object AppModule {
     ): LibsqlRoomDriver {
         logW(TAG, "█████▓▓▓▓▒▒▒░░ provideLibsqlRoomDriver ░░▒▒▒▓▓▓▓█████\nThread:${Thread.currentThread().name}")
         val driver =  LibsqlRoomDriver(context)
-        CoroutineScope(Dispatchers.IO).launch {
-            driver.syncDatabase()
-        }
         return driver
     }
 
