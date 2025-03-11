@@ -27,7 +27,7 @@ class LibsqlRoomDriver(
 
     private val db  = Libsql.open(
         path = dbPath,
-        url = "http://192.168.0.101:8080",
+        url = "http://10.0.2.2:8080",
         authToken = "",
     )
 
@@ -52,7 +52,9 @@ class LibsqlRoomDriver(
         //"Not yet implemented"
     }
 
-    fun syncDatabase() {
+    fun syncDatabase()  {
+        logI(TAG, "******** syncDatabase Started ********")
         db.sync()
+        logE(TAG, "******** syncDatabase ended ********")
     }
 }

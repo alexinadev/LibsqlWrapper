@@ -16,6 +16,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.FutureTask
@@ -30,22 +34,14 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun provideDatabaseExecutor(): Executor {
-        return Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "RoomDatabaseThread").apply {
-                isDaemon = true
-            }
-        }
-    }
-
-
-    @Singleton
-    @Provides
     fun provideLibsqlRoomDriver(
         @ApplicationContext context: Context,
-        databaseExecutor: Executor
     ): LibsqlRoomDriver {
+        logW(TAG, "█████▓▓▓▓▒▒▒░░ provideLibsqlRoomDriver ░░▒▒▒▓▓▓▓█████\nThread:${Thread.currentThread().name}")
         val driver =  LibsqlRoomDriver(context)
+        CoroutineScope(Dispatchers.IO).launch {
+            driver.syncDatabase()
+        }
         return driver
     }
 
@@ -54,15 +50,14 @@ object AppModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
         libsqlRoomDriver: LibsqlRoomDriver,
-//        databaseExecutor: Executor
     ): AppDatabase {
+        logW(TAG, "█████▓▓▓▓▒▒▒░░ provideDatabase ░░▒▒▒▓▓▓▓█████\nThread:${Thread.currentThread().name}")
         return Room.databaseBuilder(context, AppDatabase::class.java, LIBSQL_DB_NAME)
             .openHelperFactory { libsqlRoomDriver }
-//            .setQueryExecutor(databaseExecutor) // Use the same executor
-            .allowMainThreadQueries()
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     super.onOpen(db)
+                    logI(TAG, "onOpen database... ")
                 }
             })
             .build()
@@ -71,12 +66,18 @@ object AppModule {
 
     @Singleton
     @Provides
-    fun provideBillDao(appDatabase: AppDatabase) = appDatabase.billDao()
+    fun provideBillDao(appDatabase: AppDatabase): BillDao {
+        logW(TAG, "█████▓▓▓▓▒▒▒░░ provideBillDao ░░▒▒▒▓▓▓▓█████\nThread:${Thread.currentThread().name}")
+        return appDatabase.billDao()
+    }
 
 
     @Singleton
     @Provides
-    fun provideRepositoryMain(billDao: BillDao) = RepositoryMain(billDao)
+    fun provideRepositoryMain(billDao: BillDao): RepositoryMain {
+        logW(TAG, "█████▓▓▓▓▒▒▒░░ provideRepositoryMain ░░▒▒▒▓▓▓▓█████\nThread:${Thread.currentThread().name}")
+        return RepositoryMain(billDao)
+    }
 
 
 }
