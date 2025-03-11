@@ -1,35 +1,30 @@
 package com.alexina.libsqlwrapper.libsql
 
-import android.util.Log
 import androidx.sqlite.db.SupportSQLiteStatement
 import com.alexina.libsqlwrapper.logD
 import com.alexina.libsqlwrapper.logE
-import tech.turso.libsql.Connection
+import tech.turso.libsql.EmbeddedReplicaDatabase
 
-class LibsqlStatement(private val connection: Connection, private val sql: String) : SupportSQLiteStatement {
+class LibsqlStatement(private val db: EmbeddedReplicaDatabase, private val sql: String) : SupportSQLiteStatement {
     override fun execute() {
-        connection.execute(sql)
+        db.connect().use { c -> c.query(sql) }
     }
 
     //not supported!
     override fun executeUpdateDelete(): Int = 0
 
     override fun executeInsert(): Long {
-
         //not supported!
-//        connection.execute(sql)
-//        return connection.lastInsertRowId
         return 0L
     }
 
     override fun simpleQueryForLong(): Long {
-        val result = connection.query(sql)
-        return result.next()[0] as Long
+        return db.connect().use { c -> c.query(sql).next()[0] as Long }
     }
 
     override fun simpleQueryForString(): String {
-        val result = connection.query(sql)
-        return result.next()[0] as String
+        return db.connect().use { c -> c.query(sql).next()[0] as String }
+
     }
 
     override fun bindNull(index: Int) = bind(index, null)
@@ -41,7 +36,7 @@ class LibsqlStatement(private val connection: Connection, private val sql: Strin
     }
 
     override fun close() {
-        connection.close()
+        db.close()
     }
 
     override fun bindBlob(index: Int, value: ByteArray) = bind(index, value)

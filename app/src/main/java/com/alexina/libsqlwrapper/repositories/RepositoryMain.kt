@@ -20,5 +20,7 @@ class RepositoryMain @Inject constructor(
     }
     fun getBillsAsync() = billDao.getBillsAsync()
 
+    fun getPartnersFlow() = billDao.getPartnersFlow()
+    fun getPartners() = billDao.getPartners()
 
 }

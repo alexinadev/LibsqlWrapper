@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "1c5ed5777087a1bd08d96ded4551d682",
+    "identityHash": "297e6dffb4a59cce38ad22ba5a2cbdff",
     "entities": [
       {
         "tableName": "Bill",
@@ -95,12 +95,92 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "Partner",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`partnerId` TEXT NOT NULL, `v` TEXT NOT NULL, `creator` TEXT NOT NULL, `deleted` INTEGER NOT NULL, `balance` INTEGER NOT NULL, `positiveBalance` INTEGER NOT NULL, `negativeBalance` INTEGER NOT NULL, `name` TEXT, `bookId` TEXT NOT NULL, `phone` TEXT, `isRegistered` INTEGER NOT NULL, PRIMARY KEY(`partnerId`))",
+        "fields": [
+          {
+            "fieldPath": "partnerId",
+            "columnName": "partnerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "v",
+            "columnName": "v",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creator",
+            "columnName": "creator",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted",
+            "columnName": "deleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "balance",
+            "columnName": "balance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "positiveBalance",
+            "columnName": "positiveBalance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negativeBalance",
+            "columnName": "negativeBalance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "bookId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "isRegistered",
+            "columnName": "isRegistered",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "partnerId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1c5ed5777087a1bd08d96ded4551d682')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '297e6dffb4a59cce38ad22ba5a2cbdff')"
     ]
   }
 }
