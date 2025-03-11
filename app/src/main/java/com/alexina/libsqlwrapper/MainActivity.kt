@@ -62,11 +62,10 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 val startTime = System.currentTimeMillis()
                 val b = dao.getBillsAsync()
-//                val c = db.openHelper.readableDatabase.query("select * from bill")
-                val count = b.size
+                val count = b.count()
                 val duration = System.currentTimeMillis() - startTime
                 withContext(Dispatchers.Main) {
-//                    adapterBills.submitList(bills)
+                    adapterBills.submitList(b)
                     Toast.makeText(this@MainActivity, "$count Bills Fetched in $duration ms", Toast.LENGTH_SHORT).show()
                 }
             }

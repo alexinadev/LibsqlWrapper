@@ -31,11 +31,6 @@ class LibsqlRoomDriver(
         authToken = "",
     )
 
-
-
-
-
-
     override val databaseName: String
         get() = LIBSQL_DB_NAME
     override val readableDatabase: SupportSQLiteDatabase

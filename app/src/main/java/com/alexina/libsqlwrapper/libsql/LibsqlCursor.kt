@@ -1,6 +1,8 @@
 package com.alexina.libsqlwrapper.libsql
 
 import android.database.AbstractCursor
+import com.alexina.libsqlwrapper.logD
+import tech.turso.libsql.Row
 import tech.turso.libsql.Rows
 
 class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
@@ -10,7 +12,8 @@ class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
         .map { index -> rows.columnNames(index)!! }
         .toTypedArray()
 
-    override fun getCount(): Int = rows.count()
+    private val count = rows.count()
+    override fun getCount(): Int = count
 
     override fun getColumnNames(): Array<String> = colNames
 
@@ -23,7 +26,10 @@ class LibsqlCursor(private val rows: Rows) : AbstractCursor() {
     override fun isNull(column: Int): Boolean = getColumn(column) == null
     override fun getBlob(column: Int): ByteArray = getColumn(column) as ByteArray
 
-    private fun getRow() = rowsArray[position]
+    private fun getRow(): Row {
+        return rowsArray[position]
+    }
+
     private fun getColumn(column: Int): Any? = getRow()[column]
 
     override fun close() {
